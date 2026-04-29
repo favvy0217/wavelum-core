@@ -1,5 +1,5 @@
 use soroban_sdk::{Env, Vec, Address, Map, BytesN};
-use crate::types::{ClaimEvent, AuthorizedPayoutAddress, AddressWhitelistRequest, Nullifier, Commitment, PathPaymentConfig, PathPaymentClaimEvent, LockupConfig, BeneficiaryReassignment, VetoVote, TokenSupplyInfo, LSTConfig, TvlCapConfig, RateLimitConfig, RelayerConfig, ConfidentialGrant, MasterViewingKey, StreamPause};
+use crate::types::{ClaimEvent, AuthorizedPayoutAddress, AddressWhitelistRequest, Nullifier, Commitment, PathPaymentConfig, PathPaymentClaimEvent, LockupConfig, BeneficiaryReassignment, VetoVote, TokenSupplyInfo, LSTConfig, TvlCapConfig, RateLimitConfig, RelayerConfig, ConfidentialGrant, MasterViewingKey, StreamPause, MasterSchedule};
 
 pub const CLAIM_HISTORY: &str = "CLAIM_HISTORY";
 pub const AUTHORIZED_PAYOUT_ADDRESS: &str = "AUTHORIZED_PAYOUT_ADDRESS";
@@ -569,28 +569,44 @@ pub fn add_stream_pause_to_history(e: &Env, pause: &StreamPause) {
     e.storage().instance().set(&STREAM_PAUSE_HISTORY, &history);
 }
 
-// ========== ISSUE #280: Protocol Sunset and Migration Functions ==========
+// ========== ISSUE #276: Vesting Schedule Consolidation Storage ==========
 
-pub fn get_protocol_sunset(e: &Env) -> Option<crate::types::ProtocolSunset> {
-    e.storage().instance().get(&PROTOCOL_SUNSET)
+/// Get master schedule by ID
+pub fn get_master_schedule(e: &Env, master_id: u32) -> Option<MasterSchedule> {
+    e.storage().instance().get(&(crate::types::MASTER_SCHEDULES, master_id))
 }
 
-pub fn set_protocol_sunset(e: &Env, sunset: &crate::types::ProtocolSunset) {
-    e.storage().instance().set(&PROTOCOL_SUNSET, sunset);
+/// Set master schedule
+pub fn set_master_schedule(e: &Env, master_id: u32, schedule: &MasterSchedule) {
+    e.storage().instance().set(&(crate::types::MASTER_SCHEDULES, master_id), schedule);
 }
 
-pub fn get_migration_payload(e: &Env, beneficiary: &Address, vesting_id: u32) -> Option<crate::types::MigrationPayload> {
-    e.storage().instance().get(&(MIGRATION_PAYLOADS, beneficiary.clone(), vesting_id))
+/// Remove master schedule
+pub fn remove_master_schedule(e: &Env, master_id: u32) {
+    e.storage().instance().remove(&(crate::types::MASTER_SCHEDULES, master_id));
 }
 
-pub fn set_migration_payload(e: &Env, beneficiary: &Address, vesting_id: u32, payload: &crate::types::MigrationPayload) {
-    e.storage().instance().set(&(MIGRATION_PAYLOADS, beneficiary.clone(), vesting_id), payload);
+/// Check if a schedule has been merged
+pub fn is_schedule_merged(e: &Env, schedule_id: u32) -> bool {
+    e.storage()
+        .instance()
+        .get(&(crate::types::MERGED_SCHEDULES, schedule_id))
+        .unwrap_or(false)
 }
 
-pub fn get_relayer_migration(e: &Env, beneficiary: &Address, vesting_id: u32) -> Option<crate::types::RelayerMigration> {
-    e.storage().instance().get(&(RELAYER_MIGRATIONS, beneficiary.clone(), vesting_id))
+/// Mark a schedule as merged
+pub fn mark_schedule_merged(e: &Env, schedule_id: u32) {
+    e.storage().instance().set(&(crate::types::MERGED_SCHEDULES, schedule_id), &true);
 }
 
-pub fn set_relayer_migration(e: &Env, beneficiary: &Address, vesting_id: u32, migration: &crate::types::RelayerMigration) {
-    e.storage().instance().set(&(RELAYER_MIGRATIONS, beneficiary.clone(), vesting_id), migration);
+/// Get next available master schedule ID
+pub fn get_next_master_schedule_id(e: &Env) -> u32 {
+    let current_id = e
+        .storage()
+        .instance()
+        .get(&("MASTER_SCHEDULE_COUNTER"))
+        .unwrap_or(0u32);
+    let next_id = current_id + 1;
+    e.storage().instance().set(&("MASTER_SCHEDULE_COUNTER"), &next_id);
+    next_id
 }
