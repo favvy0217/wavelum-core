@@ -2,9 +2,10 @@
 
 Smart contracts for blockchain-based vesting vault and token streaming infrastructure with governance, compliance, and cross-chain capabilities on Stellar Soroban.
 
-## Deployed Contract
 - **Network:** Stellar Testnet
 - **Contract ID:** CD6OGC46OFCV52IJQKEDVKLX5ASA3ZMSTHAAZQIPDSJV6VZ3KUJDEP4D
+
+See [DOCUMENTATION.md](./DOCUMENTATION.md) for the complete protocol documentation, including feature specifications, contract API reference, formal verification, and security guidance.
 
 ## Gas Costs
 
